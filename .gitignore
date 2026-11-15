@@ -13,9 +13,6 @@ venv/
 Thumbs.db
 desktop.ini
 
-# TaskMate temporary, backup and per-user files
-tmp-*.tmp
+# TaskMate temporary and backup files
 tasks-*.tmp
 tasks.corrupt-*.json
-tasks.invalid-backup-*.json
-settings.json

@@ -24,16 +24,7 @@ MAX_DESCRIPTION_LENGTH = 1000
 
 
 class TaskValidationError(ValueError):
-    """Raised when user input or stored task data is not valid.
-
-    The message is a translation key (see i18n.py) plus optional parameters,
-    so the GUI can show it in the language the user chose.
-    """
-
-    def __init__(self, key, **params):
-        super().__init__(key)
-        self.key = key
-        self.params = params
+    """Raised when user input or stored task data is not valid."""
 
 
 def parse_due_date(text):
@@ -43,11 +34,13 @@ def parse_due_date(text):
     """
     cleaned = str(text).strip()
     if not cleaned:
-        raise TaskValidationError("err_due_required")
+        raise TaskValidationError("Due date is required (format YYYY-MM-DD).")
     try:
         return datetime.strptime(cleaned, DATE_FORMAT).date()
     except ValueError:
-        raise TaskValidationError("err_due_invalid", value=cleaned)
+        raise TaskValidationError(
+            f"'{cleaned}' is not a valid due date. Use YYYY-MM-DD, e.g. 2026-12-31."
+        )
 
 
 def validate_task_fields(title, description="", subject="", due_date="",
@@ -62,20 +55,22 @@ def validate_task_fields(title, description="", subject="", due_date="",
     clean_due = str(due_date or "").strip()
 
     if not clean_title:
-        raise TaskValidationError("err_title_empty")
+        raise TaskValidationError("The task title cannot be empty.")
     if len(clean_title) > MAX_TITLE_LENGTH:
-        raise TaskValidationError("err_title_long", max=MAX_TITLE_LENGTH)
+        raise TaskValidationError(f"The title must be {MAX_TITLE_LENGTH} characters or fewer.")
     if len(clean_subject) > MAX_SUBJECT_LENGTH:
-        raise TaskValidationError("err_subject_long", max=MAX_SUBJECT_LENGTH)
+        raise TaskValidationError(f"The subject must be {MAX_SUBJECT_LENGTH} characters or fewer.")
     if len(clean_description) > MAX_DESCRIPTION_LENGTH:
-        raise TaskValidationError("err_description_long", max=MAX_DESCRIPTION_LENGTH)
+        raise TaskValidationError(
+            f"The description must be {MAX_DESCRIPTION_LENGTH} characters or fewer."
+        )
 
     parse_due_date(clean_due)  # raises if the date is invalid
 
     if priority not in PRIORITIES:
-        raise TaskValidationError("err_priority")
+        raise TaskValidationError("Priority must be Low, Medium or High.")
     if status not in STATUSES:
-        raise TaskValidationError("err_status")
+        raise TaskValidationError("Status must be Pending or Completed.")
 
     return {
         "title": clean_title,
@@ -130,11 +125,11 @@ class Task:
         Raises TaskValidationError (or ValueError/TypeError) if the data is invalid.
         """
         if not isinstance(data, dict):
-            raise TaskValidationError("err_task_entry_not_object")
+            raise TaskValidationError("Task entry is not an object.")
         try:
             task_id = int(data["id"])
         except (KeyError, TypeError, ValueError):
-            raise TaskValidationError("err_task_id")
+            raise TaskValidationError("Task entry has no valid id.")
 
         cleaned = validate_task_fields(
             title=data.get("title", ""),
@@ -197,7 +192,7 @@ class TaskManager:
         }
         unknown = set(changes) - set(current)
         if unknown:
-            raise TaskValidationError("err_unknown_field", fields=", ".join(sorted(unknown)))
+            raise TaskValidationError(f"Unknown task field(s): {', '.join(sorted(unknown))}")
         current.update(changes)
         cleaned = validate_task_fields(**current)  # raises before anything is changed
         for field_name, value in cleaned.items():

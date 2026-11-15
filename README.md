@@ -15,8 +15,7 @@ server, no paid services and no extra packages.
 - **Organisation** – filter by status and priority, search by title or subject, and sort by due date (ascending or descending).
 - **Validation** – empty titles, invalid dates and invalid choices are rejected with a clear message.
 - **Automatic saving** – every change is saved to `tasks.json` immediately and loaded again when the app starts.
-- **Arabic and English** – switch the whole interface between English and العربية (with right-to-left layout for Arabic) from the drop-down at the top right. Your choice is remembered.
-- **Safe data handling** – a missing file starts an empty list; a damaged file is backed up (renamed with a `.corrupt-` timestamp) instead of crashing the app. If only some saved tasks are invalid, the valid ones load and a copy of the original file is kept before anything is rewritten.
+- **Safe data handling** – a missing file starts an empty list; a damaged file is backed up (renamed with a `.corrupt-` timestamp) instead of crashing the app.
 
 ## Technologies Used
 
@@ -31,12 +30,10 @@ server, no paid services and no extra packages.
 TaskMate/
 ├── main.py             # Application entry point and the Tkinter window
 ├── task_manager.py     # Task model, validation, add/edit/delete/complete, filter/sort, statistics
-├── storage.py          # Loading and saving tasks.json and settings.json safely
-├── i18n.py             # English and Arabic text
-├── tasks.json          # Local task data file (created/updated by the app)
-├── settings.json       # Remembered language (created when you change the language)
+├── storage.py          # Loading and saving tasks.json safely
+├── tasks.json          # Local data file (created/updated by the app)
 ├── tests/
-│   └── test_taskmate.py  # Automated tests for the logic, storage and translations
+│   └── test_taskmate.py  # Automated tests for the logic and storage
 ├── .gitignore
 └── README.md
 ```
@@ -88,13 +85,6 @@ python -m unittest discover -s tests -v
 
 Overdue tasks are shown in red. Completed tasks are shown in grey.
 
-## Changing the Language
-
-Use the **Language** drop-down at the top right of the window to choose
-**English** or **العربية**. The window is redrawn immediately, and the choice is
-saved in `settings.json`. Task data is stored in English internally, so switching
-language never changes your tasks.
-
 ## Data File
 
 All tasks are stored in `tasks.json` in the same folder as `main.py`:
@@ -121,5 +111,3 @@ All tasks are stored in `tasks.json` in the same folder as `main.py`:
 - Deleting a task cannot be undone, so the confirmation message is shown first.
 - If `tasks.json` is damaged, the app shows a warning, moves the damaged file to a
   backup named `tasks.corrupt-<date-time>.json`, and starts with an empty list.
-- If some tasks in `tasks.json` are invalid, the valid tasks are loaded, a copy of the
-  original file is saved as `tasks.invalid-backup-<date-time>.json`, and a warning is shown.

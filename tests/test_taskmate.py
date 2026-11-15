@@ -18,7 +18,6 @@ from datetime import date
 PROJECT_FOLDER = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_FOLDER)
 
-import i18n  # noqa: E402
 import storage  # noqa: E402
 from task_manager import Task, TaskManager, TaskValidationError  # noqa: E402
 
@@ -213,7 +212,7 @@ class StorageTests(unittest.TestCase):
             handle.write("{this is not json")
         tasks, warning = storage.load_tasks(self.data_file)
         self.assertEqual(tasks, [])
-        self.assertEqual(warning.key, "warn_invalid_json")
+        self.assertIsNotNone(warning)
         self.assertFalse(os.path.exists(self.data_file))
         backups = [name for name in os.listdir(self.temp_dir.name) if ".corrupt-" in name]
         self.assertEqual(len(backups), 1)
@@ -223,7 +222,7 @@ class StorageTests(unittest.TestCase):
             json.dump({"tasks": "not a list"}, handle)
         tasks, warning = storage.load_tasks(self.data_file)
         self.assertEqual(tasks, [])
-        self.assertEqual(warning.key, "warn_bad_structure")
+        self.assertIsNotNone(warning)
 
     def test_invalid_entries_are_skipped_but_valid_ones_kept(self):
         good = {"id": 1, "title": "Good", "description": "", "subject": "",
@@ -234,26 +233,7 @@ class StorageTests(unittest.TestCase):
             json.dump({"version": 1, "tasks": [good, bad_title, bad_date, "text"]}, handle)
         tasks, warning = storage.load_tasks(self.data_file)
         self.assertEqual([t.title for t in tasks], ["Good"])
-        self.assertEqual(warning.key, "warn_skipped_tasks")
-        self.assertEqual(warning.params["count"], 3)
-        # The original file is copied before the invalid entries can be lost
-        self.assertTrue(os.path.exists(warning.params["path"]))
-        with open(warning.params["path"], encoding="utf-8") as handle:
-            self.assertEqual(len(json.load(handle)["tasks"]), 4)
-
-    def test_settings_round_trip_and_defaults(self):
-        settings_file = os.path.join(self.temp_dir.name, "settings.json")
-        self.assertEqual(storage.load_language(settings_file), "en")
-        storage.save_language("ar", settings_file)
-        self.assertEqual(storage.load_language(settings_file), "ar")
-        with open(settings_file, "w", encoding="utf-8") as handle:
-            handle.write("not json")
-        self.assertEqual(storage.load_language(settings_file), "en")
-
-    def test_validation_errors_carry_translation_keys(self):
-        with self.assertRaises(TaskValidationError) as context:
-            TaskManager().add_task(title="", due_date="2026-12-01")
-        self.assertEqual(context.exception.key, "err_title_empty")
+        self.assertIn("3 saved task(s)", warning)
 
     def test_empty_file_is_treated_as_no_tasks(self):
         open(self.data_file, "w", encoding="utf-8").close()
@@ -264,36 +244,6 @@ class StorageTests(unittest.TestCase):
     def test_no_temporary_files_left_after_save(self):
         storage.save_tasks([], self.data_file)
         self.assertEqual(os.listdir(self.temp_dir.name), ["tasks.json"])
-
-
-class TranslationTests(unittest.TestCase):
-
-    def tearDown(self):
-        i18n.set_language("en")
-
-    def test_arabic_and_english_have_same_keys(self):
-        self.assertEqual(set(i18n.TRANSLATIONS["en"]), set(i18n.TRANSLATIONS["ar"]))
-
-    def test_every_error_key_is_translated(self):
-        error_keys = [key for key in i18n.TRANSLATIONS["en"] if key.startswith(("err_", "warn_", "msg_"))]
-        for language in ("en", "ar"):
-            for key in error_keys:
-                self.assertTrue(i18n.TRANSLATIONS[language][key].strip(), (language, key))
-
-    def test_switching_language_changes_text(self):
-        i18n.set_language("ar")
-        self.assertTrue(i18n.is_rtl())
-        self.assertEqual(i18n.t("add_task"), i18n.TRANSLATIONS["ar"]["add_task"])
-        i18n.set_language("en")
-        self.assertFalse(i18n.is_rtl())
-        self.assertEqual(i18n.t("add_task"), "+ Add Task")
-
-    def test_unknown_language_is_ignored(self):
-        i18n.set_language("fr")
-        self.assertEqual(i18n.get_language(), "en")
-
-    def test_placeholders_are_filled(self):
-        self.assertIn("Math", i18n.t("msg_delete_confirm", title="Math"))
 
 
 if __name__ == "__main__":
